@@ -9,6 +9,7 @@ using Parse.Api.Converters;
 using Parse.Api.Extensions;
 using Parse.Api.Models;
 using Parse.Api.Models.Internal;
+using Parse.Api.Utilities;
 
 namespace Parse.Api
 {
@@ -49,13 +50,13 @@ namespace Parse.Api
                 throw new ArgumentNullException("obj");
             }
 
-            var resource = string.Format(ParseUrls.CLASS, typeof (T).Name);
+            var resource = string.Format(ParseUrls.CLASS, typeof(T).Name);
             var request = CreateRequest("POST", resource);
             request.AddParseBody(obj);
 
             var response = ExecuteAndValidate<ParseObject>(request, HttpStatusCode.Created);
 
-            var result = new ParseResult<T> {Exception = response.Exception};
+            var result = new ParseResult<T> { Exception = response.Exception };
 
             if (response.Exception == null)
             {
@@ -79,7 +80,7 @@ namespace Parse.Api
                 throw new ArgumentException("ObjectId is required.");
             }
 
-            var resource = string.Format(ParseUrls.CLASS_OBJECT, typeof (T).Name, obj.ObjectId);
+            var resource = string.Format(ParseUrls.CLASS_OBJECT, typeof(T).Name, obj.ObjectId);
             var request = CreateRequest("PUT", resource);
             request.AddParseBody(obj);
 
@@ -109,9 +110,9 @@ namespace Parse.Api
                 throw new ArgumentNullException("objectId");
             }
 
-            var type = typeof (T);
+            var type = typeof(T);
 
-            if (typeof (ParseUser).IsAssignableFrom(type))
+            if (typeof(ParseUser).IsAssignableFrom(type))
             {
                 throw new ArgumentException("Use GetUser() instead of GetObject() to query users.");
             }
@@ -149,9 +150,9 @@ namespace Parse.Api
         /// <returns>A list of result object, and the total count of results in case the results were limited</returns>
         public QueryResult<T> GetObjects<T>(object where = null, string order = null, int limit = 100, int skip = 0, bool includeReferences = false) where T : ParseObject, new()
         {
-            var type = typeof (T);
+            var type = typeof(T);
 
-            if (typeof (ParseUser).IsAssignableFrom(type))
+            if (typeof(ParseUser).IsAssignableFrom(type))
             {
                 throw new ArgumentException("Use GetUsers() instead of GetObjects() to query users.");
             }
@@ -238,11 +239,11 @@ namespace Parse.Api
         /// <param name="toObjs">The ParseObjects to add to the relation</param>
         public ParseResult AddToRelation<T>(T fromObj, string relationName, IEnumerable<ParseObject> toObjs) where T : ParseObject, new()
         {
-            var resource = string.Format(ParseUrls.CLASS_OBJECT, typeof (T).Name, fromObj.ObjectId);
+            var resource = string.Format(ParseUrls.CLASS_OBJECT, typeof(T).Name, fromObj.ObjectId);
             var request = CreateRequest("PUT", resource);
             request.AddBody(new Dictionary<string, object>
             {
-                {relationName, new {__op = "AddRelation", objects = toObjs.Select(x => new ParsePointer(x)).ToList()}}
+                { relationName, new {__op = "AddRelation", objects = toObjs.Select(x => new ParsePointer(x)).ToList()} }
             });
             return ExecuteAndValidate(request);
         }
@@ -259,7 +260,7 @@ namespace Parse.Api
             var request = CreateRequest("PUT", resource);
             request.AddBody(new Dictionary<string, object>
             {
-                {relationName, new {__op = "RemoveRelation", objects = toObjs.Select(x => new ParsePointer(x)).ToList()}}
+                { relationName, new {__op = "RemoveRelation", objects = toObjs.Select(x => new ParsePointer(x)).ToList()} }
             });
             return ExecuteAndValidate(request);
         }
@@ -316,9 +317,9 @@ namespace Parse.Api
 
             var response = ExecuteAndValidate<T>(request);
 
-            var result = new UserResult<T> {Exception = response.Exception, User = response.Result};
+            var result = new UserResult<T> { Exception = response.Exception, User = response.Result };
 
-            if (response.Exception == null && response.Content!=null)
+            if (response.Exception == null && response.Content != null)
             {
                 result.SessionToken = JsonConvert.DeserializeObject<UserResult<T>>(response.Content).SessionToken;
             }
@@ -408,6 +409,142 @@ namespace Parse.Api
         }
 
         #endregion
+
+        #region installations
+
+        /// <summary>
+        /// Creates a new ParseInstallation
+        /// </summary>
+        /// <param name="installation">The installation to be created on the server</param>
+        /// <returns>A fully populated ParseObject, including ObjectId</returns>
+        public ParseResult<T> CreateInstallation<T>(T installation) where T : ParseInstallation, new()
+        {
+            if (installation == null)
+            {
+                throw new ArgumentNullException("installation");
+            }
+                
+            var request = CreateRequest("POST", ParseUrls.INSTALLATION);
+            request.AddParseBody(installation);
+
+            var response = ExecuteAndValidate<ParseObject>(request, HttpStatusCode.Created);
+
+            var result = new ParseResult<T> { Exception = response.Exception };
+
+            if (response.Exception == null)
+            {
+                installation.CreatedAt = response.Result.CreatedAt;
+                installation.UpdatedAt = response.Result.CreatedAt; // UpdatedAt doesn't come back for create requests
+                installation.ObjectId = response.Result.ObjectId;
+                result.Result = installation;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Updates a pre-existing ParseInstallation
+        /// </summary>
+        /// <param name="installation">The installation being updated</param>
+        public ParseResult<T> UpdateInstallation<T>(T installation) where T : ParseInstallation, new()
+        {
+            if (installation == null || string.IsNullOrEmpty(installation.ObjectId))
+            {
+                throw new ArgumentException("ObjectId is required.");
+            }
+
+            var resource = string.Format(ParseUrls.INSTALLATION_OBJECT, typeof(T).Name, installation.ObjectId);
+            var request = CreateRequest("PUT", resource);
+            request.AddParseBody(installation);
+
+            var response = ExecuteAndValidate<ParseInstallation>(request);
+
+            var result = new ParseResult<T> { Exception = response.Exception };
+
+            if (response.Exception == null)
+            {
+                installation.UpdatedAt = response.Result.UpdatedAt; // only UpdatedAt comes back
+                result.Result = installation;
+            }
+
+            return result;
+        }
+
+
+
+        #endregion
+
+
+        #region files
+
+
+        public UploadInfo Upload(string filepath)
+        {
+            using (var s = new FileStream(filepath, FileMode.Open))
+            {
+                return Upload(s, Path.GetFileName(filepath));
+            }
+        }
+
+        public UploadInfo Upload(Stream source, string filename)
+        {
+//            var req = WebRequest.Create( );
+            var resource = string.Format(ParseUrls.FILE, filename);
+            var req = CreateRequest("POST", resource);
+
+//            req.Method = "POST";
+//            req.Headers.Add("X-Parse-Application-Id", _appId);
+//            req.Headers.Add("X-Parse-REST-API-Key", _restKey);
+            req.ContentType = FileUtilities.GetContentTypeFromFilenameExtension(filename);
+
+            using (var sreq = req.BeginGetRequestStream())
+            {
+                var buffer = new byte[4 * 1024];
+                int n;
+                while ((n = source.Read(buffer, 0, buffer.Length)) > 0)
+                    sreq.Write(buffer, 0, n);
+            }
+
+            using (var sr = new StreamReader(req.GetResponse().GetResponseStream()))
+            {
+                var jsonresponse = sr.ReadToEnd();
+
+                var jss = new JavaScriptSerializer();
+                var dict = jss.Deserialize<Dictionary<string, string>>(jsonresponse);
+
+                return new UploadInfo(dict["name"], dict["url"]);
+            }
+        }
+
+
+        //        public ParseResult<T> UpdateInstallation<T>(T installation) where T : ParseInstallation, new()
+        //        {
+        //            if (installation == null || string.IsNullOrEmpty(installation.ObjectId))
+        //            {
+        //                throw new ArgumentException("ObjectId is required.");
+        //            }
+        //
+        //            var resource = string.Format(ParseUrls.INSTALLATION_OBJECT, typeof(T).Name, installation.ObjectId);
+        //            var request = CreateRequest("PUT", resource);
+        //            request.AddParseBody(installation);
+        //
+        //            var response = ExecuteAndValidate<ParseInstallation>(request);
+        //
+        //            var result = new ParseResult<T> { Exception = response.Exception };
+        //
+        //            if (response.Exception == null)
+        //            {
+        //                installation.UpdatedAt = response.Result.UpdatedAt; // only UpdatedAt comes back
+        //                result.Result = installation;
+        //            }
+        //
+        //            return result;
+        //        }
+
+
+
+        #endregion
+
 
         #region cloud functions
 
@@ -539,17 +676,17 @@ namespace Parse.Api
             {
                 try
                 {
-                    var theRequest = (HttpWebRequest) ar1.AsyncState;
+                    var theRequest = (HttpWebRequest)ar1.AsyncState;
                     HttpWebResponse httpResponse;
 
                     try
                     {
-                        httpResponse = (HttpWebResponse) theRequest.EndGetResponse(ar1);
+                        httpResponse = (HttpWebResponse)theRequest.EndGetResponse(ar1);
                     }
                     catch (WebException we)
                     {
                         // server responses in the range of 4xx and 5xx throw a WebException
-                        httpResponse = (HttpWebResponse) we.Response;
+                        httpResponse = (HttpWebResponse)we.Response;
                     }
 
                     response.StatusCode = httpResponse.StatusCode;
@@ -583,6 +720,7 @@ namespace Parse.Api
         internal class ParseResponse
         {
             public string Content { get; set; }
+
             public HttpStatusCode StatusCode { get; set; }
         }
 

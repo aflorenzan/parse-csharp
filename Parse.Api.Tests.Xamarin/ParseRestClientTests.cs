@@ -12,8 +12,8 @@ namespace Parse.Api.Tests
         private ParseRestClient _client;
 
         // fill these fields in to run all tests
-        private const string APP_ID = "";
-        private const string REST_API_KEY = "";
+        private const string APP_ID = "DKaIMjcDeNhrdd55FDLNxvVlzTXPezLTZ6kMERQY";
+        private const string REST_API_KEY = "rJRSuGVgcwf7swlFJgXpvR8KKKHV4dVsakkwJ58k";
         private const string VALID_USER_ID1 = "";
         private const string VALID_USER_ID2 = "";
         private const string CLOUD_FUNCTION_NAME = "";
@@ -136,37 +136,37 @@ namespace Parse.Api.Tests
         [Test]
         public void TestInstallations()
         {
-            var user = GetFakeUser();
+            var installation = GetFakeInstallation("android");
 
             // make sure sign up works
-            var session = _client.SignUp(user);
-            Assert.IsNotNull(session.SessionToken);
-            AssertParseObjectEqual(user, session.User);
+            var obj = _client.CreateInstallation(installation);
+            Assert.IsNotNull(obj.Result);
+            AssertParseObjectEqual(installation, obj.Result);
 
-            // make sure update works
-            user.phone = "+" + new Random().Next();
-            var updated = _client.UpdateUser(session.User, session.SessionToken).Result;
-            AssertParseObjectEqual(updated, session.User);
-
-            // make sure retreive works
-            var result2 = _client.GetUser<MyUser>(updated.ObjectId, session.SessionToken).Result;
-            AssertParseObjectEqual(session.User, result2);
-
-            // make sure query works
-            var result3 = _client.GetUsers<MyUser>(new
-            {
-                email = new Constraint{ In = new List<object>{ user.Email } },
-                phone = new Constraint{ NotIn = new List<object>{ user.phone + "someStuff" } },
-            });
-            Assert.IsTrue(result3.TotalCount > 0);
-
-            // make sure LogIn works
-            Assert.DoesNotThrow(() => _client.LogIn(user));
-
-            // make sure delete works
-            _client.DeleteUser(session.User, session.SessionToken);
-            var shouldFail = _client.GetUser<MyUser>(session.User.ObjectId);
-            Assert.IsNotNull(shouldFail.Exception);
+//            // make sure update works
+//            installation.phone = "+" + new Random().Next();
+//            var updated = _client.UpdateUser(obj.User, obj.SessionToken).Result;
+//            AssertParseObjectEqual(updated, obj.User);
+//
+//            // make sure retreive works
+//            var result2 = _client.GetUser<MyUser>(updated.ObjectId, obj.SessionToken).Result;
+//            AssertParseObjectEqual(obj.User, result2);
+//
+//            // make sure query works
+//            var result3 = _client.GetUsers<MyUser>(new
+//            {
+//                email = new Constraint{ In = new List<object>{ installation.Email } },
+//                phone = new Constraint{ NotIn = new List<object>{ installation.phone + "someStuff" } },
+//            });
+//            Assert.IsTrue(result3.TotalCount > 0);
+//
+//            // make sure LogIn works
+//            Assert.DoesNotThrow(() => _client.LogIn(installation));
+//
+//            // make sure delete works
+//            _client.DeleteUser(obj.User, obj.SessionToken);
+//            var shouldFail = _client.GetUser<MyUser>(obj.User.ObjectId);
+//            Assert.IsNotNull(shouldFail.Exception);
         }
 
 
@@ -235,12 +235,35 @@ namespace Parse.Api.Tests
             };
         }
 
-        private static ParseInstallation GetFakeInstallation()
+        private static ParseInstallation GetFakeInstallation(string deviceType = "ios")
         {
-            var rand = new Random().Next();
+
+            if (deviceType == "ios")
+            {
+                return new ParseInstallation
+                {
+                    DeviceType = "ios",
+                    DeviceToken = "2336a90039b89f1b5160e80b85a816070792e43815fe70fa10f6c89206b61537",
+                    Channels = new List<string>()
+                    {
+                        "test",
+                        "test.group",
+                        "test.group.personal"
+                    }
+                };
+            }
+
             return new ParseInstallation
             {
-
+                DeviceType = "android",
+                PushType = "gcm",
+                DeviceToken = "APA91bHPRgkF3JUikC4ENAHEeMrd41Zxv3hVZjC9KtT8OvPVGJ-hQMRKRrZuJAEcl7B338qju59zJMjw2DELjzEvxwYv7hH5Ynpc1ODQ0aT4U4OFEeco8ohsN5PjL1iC2dNtk2BAokeMCg2ZXKqpc8FXKmhX94kIxQ",
+                Channels = new List<string>()
+                {
+                    "test",
+                    "test-group",
+                    "test-group-personal"
+                }
             };
         }
 

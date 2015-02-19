@@ -68,7 +68,15 @@ namespace Parse.Api.Extensions
 
                 if (jsonProp != null && !string.IsNullOrEmpty(jsonProp.PropertyName))
                 {
-                    dict[jsonProp.PropertyName] = value;
+                    if (jsonProp.NullValueHandling == NullValueHandling.Ignore && value == null)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        dict[jsonProp.PropertyName] = value;
+                    }
+
                 }
                 else
                 {
@@ -88,7 +96,7 @@ namespace Parse.Api.Extensions
 
             request.BeginGetRequestStream(ar =>
             {
-                var request1 = (HttpWebRequest) ar.AsyncState;
+                var request1 = (HttpWebRequest)ar.AsyncState;
                 using (var postStream = request1.EndGetRequestStream(ar))
                 {
                     var byteArray = Encoding.UTF8.GetBytes(serializedBody);

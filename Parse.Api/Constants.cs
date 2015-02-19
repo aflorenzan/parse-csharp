@@ -20,28 +20,35 @@
         public const string LOGIN = "login";
 
         // POST to request password reset
-        public const string PASSWORD_RESET = "requestPasswordReset";  // TODO
+        public const string PASSWORD_RESET = "requestPasswordReset";
+        // TODO
 
         // POST to create, GET to query
-        public const string ROLE = "roles";// TODO
+        public const string ROLE = "roles";
+// TODO
 
         // PUT to update, GET to retreive, DELETE to delete
-        public const string ROLE_OBJECT = "roles/{0}";// TODO
+        public const string ROLE_OBJECT = "roles/{0}";
+// TODO
 
         // POST to upload
-        public const string FILE = "files/{FileName}";// TODO
+        public const string FILE = "files/{0}";
+// TODO
 
         // POST to track analytics
         public const string APP_OPENED = "events/AppOpened";
 
         // POST to send push
-        public const string PUSH = "push";// TODO
+        public const string PUSH = "push";
+// TODO
 
         // POST to upload, GET to query
-        public const string INSTALLATION = "installations";// TODO
+        public const string INSTALLATION = "installations";
+// TODO
 
         // PUT to update, GET to retreive, DELETE to delete
-        public const string INSTALLATION_OBJECT = "installations/{0}";// TODO
+        public const string INSTALLATION_OBJECT = "installations/{0}";
+// TODO
 
         // POST to call cloud function
         public const string FUNCTION = "functions/{0}";
